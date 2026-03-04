@@ -1,0 +1,39 @@
+{
+    "users": [
+        {
+            "name": "Alice",
+            "age": 20,
+            "active": true,
+            "profile": {
+                "email": "alice@test.com"
+            }
+        },
+        {
+            "name": "Bob",
+            "age": 30,
+            "active": false
+        },
+        {
+            "name": "Cindy",
+            "age": 28,
+            "active": true,
+            "profile": null
+        },
+        {
+            "name": "David",
+            "age": 35,
+            "active": true,
+            "profile": {
+                "email": "david@test.com"
+            }
+        },
+        {
+            "name": "Eve",
+            "age": 22,
+            "active": false,
+            "profile": {
+                "email": "eve@test.com"
+            }
+        }
+    ]
+}
