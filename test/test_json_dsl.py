@@ -28,13 +28,11 @@ class TestJSONDSL(unittest.TestCase):
         self.evaluator.register_function('take', self._func_take)
         self.evaluator.register_function('reverse', self._func_reverse)
 
-        self.data = {
-            "users": [
-                {"name": "Alice", "age": 20, "active": True, "profile": {"email": "alice@test.com"}},
-                {"name": "Bob", "age": 30, "active": False},
-                {"name": "Cindy", "age": 28, "active": True, "profile": None}
-            ]
-        }
+        # 从分离的 JSON 文件中读取测试数据
+        data_path = os.path.join(os.path.dirname(__file__), 'test_data.json')
+        with open(data_path, 'r', encoding='utf-8') as f:
+            import json
+            self.data = json.load(f)
 
     # ── 自定义管道函数 ──
 
