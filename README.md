@@ -2,7 +2,7 @@
 
 ## 项目结构
 ```
-bytedance_solution/
+json-query-dsl/
 ├── README.md              # 题目描述 + 实现思路
 ├── PROCESS.md             # 解题全过程记录
 ├── main.py                # CLI 命令行入口
