@@ -3,7 +3,7 @@
 ## 项目结构
 ```
 json-query-dsl/
-├── README.md              # 题目描述 + 实现思路
+├── README.md              # 需求描述 + 实现思路
 ├── PROCESS.md             # 解题全过程记录
 ├── main.py                # CLI 命令行入口
 ├── benchmark.py           # 性能基准测试
