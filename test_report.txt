@@ -164,6 +164,6 @@ test_simple_path_ast (test_unit.TestParser)
 users.name => Query -> Path -> [GetField, GetField] ... ok
 
 ----------------------------------------------------------------------
-Ran 82 tests in 0.763s
+Ran 82 tests in 0.956s
 
 OK
