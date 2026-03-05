@@ -179,7 +179,78 @@ Query
   - **`GetField` 节点**：
     如果当前操作的数据对象是 `dict`，则调用 `data.get()`；
     如果当前操作的数据对象是 `list`，则循环遍历该数组，获取每个对象的指定属性（**自动数组映射**）。
-  - **`Filter` 节点**：遍历当前提取出的列表数据，对每个元素调用 `evaluate_cond()`，如果是 `True` 则保留该元素。
+  - **`Filter` 节点**：先递归调用 `evaluate_cond` 对数组中的每一个元素的具体条件进行布尔判断，保留返回 `True` 的项。
+  - **自定义函数节点 `FuncCall`**：当解析器识别到带有 `(arg)` 的节点，比如 `sort`、`take` ，就在 `self.custom_functions` 找到用户自定义传入的回调函数，并传递 `data` 作为参数执行对应函数。
   - **`BinOp` 节点**：针对在 `Filter` 里的操作，分别计算左右两边的值，执行具体的 Python `==, !=, >, <, in, str.startswith` 运算。
   - **`FuncCall` 节点**：读取类中 `self.custom_functions` 注册表，寻找开发者已注册的方法（如 `sort`, `take`），并执行计算。
 - **产出结果：** 整个递归调用栈完结后，返回经过筛选或处理的目标 JSON 数据片段。
+
+---
+
+## 四、测试策略与考量
+
+目前的测试体系包含 5 个模块，共计 **82 条用例**。
+
+### 4.1 单元测试（Unit Test）
+解耦三大核心模块，独立验证：
+- **Lexer**：验证 Token 拆分、类型转换、以及源码位置（Position Tracking）的精确度。
+- **Parser**：验证各语法成分生成的 AST 树结构是否正确，优先级计算是否符合预期。
+- **Evaluator**：手动构造 AST 节点注入，验证执行引擎的运算逻辑。
+
+### 4.2 集成测试（Integration Test）
+端到端验证 CLI 体验：
+- 验证命令行参数解析、文件读取、stdin 数据流处理。
+- 验证不同形态的错误（文件不存在、语法错、未注册函数）能否给出正确的退出码 (Exit Code) 和 stderr 提示。
+
+### 4.3 模糊测试（Fuzz Testing）
+面向不可控输入的鲁棒性验证：
+- 随机生成几百条语法合法或绝对非法的垃圾字符串进行“狂轰滥炸”。
+- 目标：系统绝不能抛出 `IndexError` / `TypeError` 等内部异常崩溃，所有的错误必须被优雅拦截并转化为 `DSLSyntaxError` 或 `DSLRuntimeError`。
+
+### 4.4 属性测试（Property-Based Testing）
+验证数据流转的不变性质 (Invariants)：
+- **长度保持**：`users.name` 产出数组的长度必等于原数组。
+- **子集属性**：`users[age > X]` 里的每一个元素，必然在原数组中，且必然满足其验证条件。
+- **单调性**：随着 `X` 变大，`users[age > X]` 的结果数量单调不增。
+
+### 4.5 回归功能测试（Regression E2E Test）
+- **功能正确性**：路径取值、数组映射、条件过滤、多层管道链流转。
+- **操作符与边界**：越界索引（安全与非安全）、负索引、空数组过滤、多层括号嵌套等 edge cases。
+
+### 4.6 测试运行
+
+```bash
+make test
+# 或
+python3 -m unittest discover -s test -v
+```
+
+```
+Ran 82 tests in 0.763s
+OK
+```
+
+---
+
+## 五、性能基准测试
+
+通过 `benchmark.py` 生成 1000 条随机用户数据，对 11 种查询场景各执行 50 次取平均耗时：
+
+| 查询场景 | 查询表达式 | 1000条 平均耗时 |
+|---------|-----------|:-------------:|
+| 简单路径取值 | `users[0].name` | ~0.04 ms |
+| 数组映射 | `users.name` | ~0.2 ms |
+| 条件过滤 | `users[age > 30].name` | ~1.3 ms |
+| 复合条件 (and) | `users[age > 25 and active == true].name` | ~2.8 ms |
+| 管道: filter + sort + take | `users[active==true] \| sort(score) \| take(10) \| .name` | ~1.1 ms |
+
+可扩展性测试（查询 `users[age > 30].name`）：
+
+| 数据量 | 平均耗时 | 吞吐量 |
+|-------:|--------:|-------:|
+| 100 | 0.15 ms | ~6500 qps |
+| 1,000 | 1.3 ms | ~800 qps |
+| 5,000 | 5.9 ms | ~170 qps |
+| 10,000 | 12.4 ms | ~80 qps |
+
+耗时与数据量基本呈线性关系 O(n)，符合预期——每条查询只需遍历一次数组。
